@@ -341,7 +341,7 @@ mod tests {
 
     #[cfg(test)]
     fn create_walker<'a>(use_apparent_size: bool) -> WalkData<'a> {
-        use crate::PIndicator;
+        use crate::progress::PIndicator;
         let indicator = PIndicator::build_me();
         WalkData {
             ignore_directories: HashSet::new(),
