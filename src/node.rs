@@ -1,3 +1,6 @@
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::dir_walker::WalkData;
 use crate::platform::get_metadata;
 use crate::utils::is_filtered_out_due_to_file_time;
@@ -7,7 +10,7 @@ use crate::utils::is_filtered_out_due_to_regex;
 use std::cmp::Ordering;
 use std::path::PathBuf;
 
-#[derive(Debug, Eq, Clone)]
+#[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct Node {
     pub name: PathBuf,
     pub size: u64,
