@@ -32,6 +32,17 @@ pub fn build_directory_tree(
     let errors_for_rayon = Arc::new(Mutex::new(errors));
     let indicator = progress::PIndicator::build_me();
     
+    // Create an aggregate data structure for filtering
+    let agg_data = filter::AggregateData {
+        min_size: None,
+        only_dir: false,
+        only_file: false,
+        number_of_lines: usize::MAX,
+        depth: max_depth.unwrap_or(usize::MAX), // Use the provided max_depth here
+        using_a_filter: false,
+        short_paths: false,
+    };
+    
     let walk_data = dir_walker::WalkData {
         ignore_directories: HashSet::new(),
         filter_regex: &[],
@@ -40,17 +51,22 @@ pub fn build_directory_tree(
         filter_modified_time: None,
         filter_accessed_time: None,
         filter_changed_time: None,
-        use_apparent_size: false,
+        use_apparent_size: false, // Using disk usage (blocks) by default, like the CLI
         by_filecount: false,
         by_filetime: &None,
         ignore_hidden,
-        follow_links: false,
+        follow_links: false, // Not following symlinks by default, like the CLI
         progress_data: indicator.data.clone(),
         errors: errors_for_rayon,
     };
     
     // Walk the directories
-    dir_walker::walk_it(simplified_dirs, &walk_data)
+    let nodes = dir_walker::walk_it(simplified_dirs, &walk_data);
+    
+    // Clean up properly
+    indicator.stop();
+    
+    nodes
 }
 
 /// Get largest nodes from a tree with a specified limit
