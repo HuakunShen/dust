@@ -1,8 +1,8 @@
 use crate::display_node::DisplayNode;
 use crate::node::FileTime;
 
-use ansi_term::Colour::Red;
 use lscolors::{LsColors, Style};
+use nu_ansi_term::Color::Red;
 
 use unicode_width::UnicodeWidthStr;
 
@@ -12,7 +12,7 @@ use chrono::{DateTime, Local, TimeZone, Utc};
 use std::cmp::max;
 use std::cmp::min;
 use std::fs;
-use std::iter::repeat;
+use std::iter::repeat_n;
 use std::path::Path;
 use thousands::Separable;
 
@@ -125,9 +125,9 @@ impl DrawData<'_> {
 
 pub fn draw_it(
     idd: InitialDisplayData,
+    root_node: &DisplayNode,
     no_percent_bars: bool,
     terminal_width: usize,
-    root_node: &DisplayNode,
     skip_total: bool,
 ) {
     let num_chars_needed_on_left_most = if idd.by_filecount {
@@ -155,7 +155,7 @@ pub fn draw_it(
         allowed_width - longest_string_length - 7
     };
 
-    let first_size_bar = repeat(BLOCKS[0]).take(max_bar_length).collect();
+    let first_size_bar = repeat_n(BLOCKS[0], max_bar_length).collect();
 
     let display_data = DisplayData {
         initial: idd,
@@ -298,12 +298,9 @@ fn pad_or_trim_filename(node: &DisplayNode, indent: &str, display_data: &Display
     );
 
     // Add spaces after the filename so we can draw the % used bar chart.
-    let name_and_padding = name
-        + " "
-            .repeat(display_data.longest_string_length - width)
-            .as_str();
-
-    name_and_padding
+    name + " "
+        .repeat(display_data.longest_string_length - width)
+        .as_str()
 }
 
 fn maybe_trim_filename(name_in: String, indent: &str, display_data: &DisplayData) -> String {
@@ -406,7 +403,7 @@ fn get_pretty_name(
             .ls_colors
             .style_for_path_with_metadata(&node.name, meta_result.as_ref().ok());
         let ansi_style = directory_color
-            .map(Style::to_ansi_term_style)
+            .map(Style::to_nu_ansi_term_style)
             .unwrap_or_default();
         let out = ansi_style.paint(name_and_padding);
         format!("{out}")
@@ -442,6 +439,9 @@ pub fn get_number_format(output_str: &str) -> Option<(u64, char)> {
 }
 
 pub fn human_readable_number(size: u64, output_str: &str) -> String {
+    if output_str == "count" {
+        return size.to_string();
+    };
     match get_number_format(output_str) {
         Some((x, u)) => {
             format!("{}{}", (size / x), u)
@@ -543,6 +543,13 @@ mod tests {
     }
 
     #[test]
+    fn test_machine_readable_filecount() {
+        assert_eq!(human_readable_number(1, "count"), "1");
+        assert_eq!(human_readable_number(1000, "count"), "1000");
+        assert_eq!(human_readable_number(1024, "count"), "1024");
+    }
+
+    #[test]
     fn test_human_readable_number() {
         assert_eq!(human_readable_number(1, ""), "1B");
         assert_eq!(human_readable_number(956, ""), "956B");
@@ -594,7 +601,7 @@ mod tests {
             size: 2_u64.pow(size),
             children: vec![],
         };
-        let first_size_bar = repeat(BLOCKS[0]).take(13).collect();
+        let first_size_bar = repeat_n(BLOCKS[0], 13).collect();
         let dd = DrawData {
             indent: "".into(),
             percent_bar: first_size_bar,
